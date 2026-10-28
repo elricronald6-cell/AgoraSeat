@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgoraSeat — self-assessed seats on BOT Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+<style>
+/* ============================================================================
+   EDITORIAL / TYPOGRAPHIC — a broadsheet. Masthead with rules, a dateline,
+   a leader with a drop cap, and the seats set as classified entries flowing
+   down newspaper columns. Stark black on newsprint, one ink of red.
+   ========================================================================== */
+:root{
+  --news:#f7f5ef;
+  --ink:#121212;
+  --ink-soft:#54504a;
+  --hair:#c9c4b8;
+  --red:#a3231c;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--news);color:var(--ink);
+  font-family:'Spectral',Georgia,serif;font-size:16px;line-height:1.56;
+  -webkit-font-smoothing:antialiased;
+}
+.sheet{max-width:1180px;margin:0 auto;padding:0 28px 72px}
+h1,h2,h3,h4,.display{font-family:'Playfair Display',Georgia,serif;margin:0;font-weight:700}
+
+/* ---------- masthead ---------- */
+.masthead{text-align:center;padding:30px 0 0}
+.masthead .rule{height:5px;background:var(--ink)}
+.masthead .rule.thin{height:1px;margin-top:4px}
+.masthead h1{font-weight:900;font-size:clamp(54px,11vw,128px);line-height:.9;letter-spacing:-.02em;
+  padding:16px 0 10px}
+.dateline{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:8px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);
+  font-family:'Spectral',serif;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---------- control strip, set like a standfirst line ---------- */
+.strip{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;padding:12px 0;
+  border-bottom:1px solid var(--hair);font-size:12.5px;letter-spacing:.06em;color:var(--ink-soft)}
+.strip b{color:var(--ink);font-weight:600}
+.strip .sp{margin-left:auto}
+
+button{
+  font-family:'Spectral',serif;font-weight:600;font-size:13px;letter-spacing:.06em;cursor:pointer;
+  background:var(--ink);color:var(--news);border:1px solid var(--ink);padding:7px 14px;border-radius:0;
+  transition:.1s
+}
+button:hover:not(:disabled){background:var(--red);border-color:var(--red)}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.line{background:transparent;color:var(--ink)}
+button.line:hover:not(:disabled){background:var(--ink);color:var(--news)}
+button.sm{font-size:12px;padding:5px 11px}
+
+/* ---------- the leader ---------- */
+.leader{display:grid;grid-template-columns:2fr 1fr;gap:34px;padding:26px 0 24px;
+  border-bottom:3px double var(--ink)}
+@media(max-width:860px){.leader{grid-template-columns:1fr}}
+.leader h2{font-size:clamp(26px,3.4vw,40px);line-height:1.1;letter-spacing:-.015em}
+.leader .standfirst{font-style:italic;font-size:19px;color:var(--ink-soft);margin-top:10px}
+.leader .body{margin-top:14px;column-count:2;column-gap:28px;column-rule:1px solid var(--hair)}
+@media(max-width:620px){.leader .body{column-count:1}}
+.leader .body p{margin:0 0 12px;text-align:justify;hyphens:auto}
+.leader .body p:first-child::first-letter{
+  font-family:'Playfair Display',serif;font-weight:900;font-size:62px;line-height:.78;
+  float:left;padding:6px 10px 0 0}
+.box{border:1px solid var(--ink);padding:18px 18px 20px}
+.box h3{font-size:19px;border-bottom:1px solid var(--ink);padding-bottom:7px;margin-bottom:12px}
+label{display:block;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink-soft);margin:12px 0 4px}
+input,select{width:100%;padding:8px 10px;border:1px solid var(--ink);background:#fff;color:var(--ink);
+  font-family:'Spectral',serif;font-size:15px;border-radius:0}
+input:focus,select:focus{outline:2px solid var(--red);outline-offset:-2px}
+
+/* ---------- section head ---------- */
+.sectionhead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+  margin:30px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+.sectionhead h2{font-size:27px}
+.sectionhead span{font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---------- classifieds: seats flowing down columns ---------- */
+.classifieds{column-count:3;column-gap:30px;column-rule:1px solid var(--hair)}
+@media(max-width:980px){.classifieds{column-count:2}}
+@media(max-width:640px){.classifieds{column-count:1}}
+.entry{break-inside:avoid;padding:0 0 18px;margin:0 0 18px;border-bottom:1px solid var(--hair)}
+.entry .kicker{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+.entry.fore .kicker{color:var(--red);font-weight:600}
+.entry h3{font-size:22px;line-height:1.15;margin:5px 0 2px}
+.entry .holder{font-size:12.5px;color:var(--ink-soft);font-style:italic}
+.entry blockquote{margin:9px 0 0;padding-left:11px;border-left:2px solid var(--ink);font-style:italic;font-size:15px}
+.entry .price{font-family:'Playfair Display',serif;font-weight:900;font-size:40px;line-height:1;margin-top:11px}
+.entry.fore .price{color:var(--red)}
+.entry .price small{display:block;font-family:'Spectral',serif;font-weight:400;font-size:11px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-top:4px}
+.entry .terms{font-size:13px;color:var(--ink-soft);margin-top:9px}
+.escrowbar{height:7px;background:#e4e0d6;margin-top:8px;position:relative}
+.escrowbar i{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
+.escrowbar.low i{background:var(--red)}
+.entry .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+.empty{padding:50px 0;text-align:center;font-style:italic;color:var(--ink-soft)}
+
+#toast{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(120%);
+  background:var(--ink);color:var(--news);padding:12px 26px;font-size:13.5px;
+  max-width:min(92vw,560px);transition:transform .22s;z-index:60}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.bad{background:var(--red)}
+
+footer{margin-top:40px;padding-top:12px;border-top:3px double var(--ink);
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ===== BOT Chain ecosystem footer (KPI 5) ===== */
+footer.bc-foot{display:block;max-width:1180px;margin:0 auto;padding:0 28px 60px}
+.bc-foot-grid{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:22px;
+  padding:20px 0 16px;border-top:3px double #121212;border-bottom:1px solid #c9c4b8}
+@media(max-width:720px){.bc-foot-grid{grid-template-columns:1fr;gap:14px}}
+.bc-foot .bc-logo{border:1px solid #121212;padding:9px 13px;background:#fff}
+.bc-foot .bc-id{font-family:'Playfair Display',serif;font-weight:700;font-size:23px;color:#121212;
+  text-transform:none}
+.bc-foot .bc-id small{display:block;font-family:'Spectral',serif;font-weight:400;font-size:10.5px;
+  letter-spacing:.2em;text-transform:uppercase;color:#54504a;margin-top:2px}
+.bc-foot .bc-links{display:flex;gap:0;flex-wrap:wrap}
+.bc-foot .bc-links a{font-family:'Spectral',serif;font-weight:600;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:#121212;text-decoration:none;padding:9px 17px;
+  border:1px solid #121212;margin-left:-1px;background:#f7f5ef}
+.bc-foot .bc-links a:hover{background:#a3231c;border-color:#a3231c;color:#f7f5ef}
+.bc-foot .bc-meta{font-family:'Spectral',serif;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:#54504a;padding:12px 0 0;
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.bc-foot .bc-meta b{color:#121212;font-weight:600}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <div class="rule"></div>
+    <div class="rule thin"></div>
+    <h1>AgoraSeat</h1>
+    <div class="dateline">
+      <span>Self-assessed seats</span>
+      <span id="d-net">BOT Chain</span>
+      <span id="d-rate">Tax —</span>
+      <span id="d-count">— seats</span>
+    </div>
+  </header>
+
+  <div class="strip">
+    <span>Wallet <b id="s-acct">not connected</b></span>
+    <span>Contract <b id="s-ctr">not set</b></span>
+    <span>Escrow held <b id="s-locked">—</b></span>
+    <span>Your credit <b id="s-credit">—</b></span>
+    <span class="sp"></span>
+    <button class="line sm" id="btn-withdraw">Withdraw credit</button>
+    <button class="line sm" id="btn-refresh">Refresh</button>
+    <button class="sm" id="btn-connect">Connect wallet</button>
+  </div>
+
+  <section class="leader">
+    <div>
+      <h2>Name your own price, and live with it</h2>
+      <p class="standfirst">A seat is a named position one address holds at a time. The holder sets the price; anyone may buy at that number, at any moment, without asking.</p>
+      <div class="body">
+        <p>Price it low and somebody takes it from you cheaply. Price it high and the running tax bleeds you. The honest valuation is the only comfortable one, which is the whole point — nobody has to referee it.</p>
+        <p>Tax is drawn from a prepaid escrow, which must always cover at least a week at the current price. Let the escrow run dry and the seat forecloses: its price falls to zero and the next person takes it for the cost of their own escrow.</p>
+        <p>Buying settles the outgoing holder's tax first, so arrears are never inherited. Proceeds are credited rather than pushed, so a holder whose address refuses payment cannot wedge the seat shut for everyone else.</p>
+      </div>
+    </div>
+
+    <aside class="box">
+      <h3>Found a seat</h3>
+      <label for="f-title">Title of the seat</label>
+      <input id="f-title" maxlength="48" placeholder="Keeper of the Water Clock" />
+      <label for="f-price">Your price — BOT</label>
+      <input id="f-price" type="number" min="0.0001" step="0.1" value="10" />
+      <label for="f-escrow">Tax escrow — BOT</label>
+      <input id="f-escrow" type="number" min="0" step="0.1" value="1" />
+      <label for="f-msg">Your message on the seat</label>
+      <input id="f-msg" maxlength="140" placeholder="on duty" />
+      <div style="margin-top:16px"><button id="btn-create">Take the seat</button></div>
+    </aside>
+  </section>
+
+  <div class="sectionhead">
+    <h2>Seats on offer</h2>
+    <span>every price below is the holder's own, and yours to take it at</span>
+  </div>
+
+  <div class="classifieds" id="seats"><div class="empty">No seats founded yet.</div></div>
+
+  <footer>
+    <span>AgoraSeat · Harberger rules · foreclosure is the only penalty</span>
+    <span id="f-chain">BOT Chain</span>
+  </footer>
+</div>
+
+
+<!-- ===== BOT Chain ecosystem footer (KPI 5) ===== -->
+<footer class="bc-foot">
+  <div class="bc-foot-grid">
+    <div class="bc-logo" aria-hidden="true"><svg viewBox="0 0 63.63 100" xmlns="http://www.w3.org/2000/svg" style="width:21px;height:33px;display:block"><path fill="#00A67E" d="M31.67 99.95 L0 82.48 L0.11 63.74 L47.01 90.60 L47.01 73.19 L15.98 55.32 L15.95 36.49 L46.92 53.57 L47.39 36.82 L15.96 17.81 L16.26 0 L63.06 27.02 L62.82 46.20 L47.86 54.67 L62.85 63.00 L63.62 81.42 Z"/></svg></div>
+    <div class="bc-id">BOT Chain<small>Part of the ecosystem</small></div>
+    <div class="bc-links">
+      <a href="https://botchain.ai" target="_blank" rel="noopener noreferrer">botchain.ai</a>
+      <a id="bc-explorer" href="https://scan.botchain.ai" target="_blank" rel="noopener noreferrer">Explorer</a>
+    </div>
+  </div>
+  <div class="bc-meta">
+    <span>&copy; 2026 <b>BOT Chain</b> &mdash; EVM-compatible Layer 1</span>
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================================
+   CONTRACT + NETWORK CONFIG
+
+   Paste the deployed address below. Defaults to BOT Chain TESTNET.
+
+   TESTNET -> MAINNET: swap these five values together, never some of them.
+     CONTRACT_ADDRESS  -> the mainnet address
+     chainId           -> "0x2A5"
+     chainName         -> "BOT Chain"
+     rpcUrls           -> ["https://rpc.botchain.ai"]
+     blockExplorerUrls -> ["https://scan.botchain.ai"]
+   ...and set label -> "MAINNET" so the badge reads correctly.
+   ========================================================================== */
+const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+const NETWORK = {
+  chainId: "0x3C8",                              // 968 testnet  | mainnet: "0x2A5"
+  chainIdDec: 968,                               // reference only, not shown on the page | mainnet: 677
+  chainName: "BOT Chain Testnet",                //              | mainnet: "BOT Chain"
+  rpcUrls: ["https://rpc.bohr.life"],            //              | mainnet: ["https://rpc.botchain.ai"]
+  blockExplorerUrls: ["https://scan.bohr.life"], //              | mainnet: ["https://scan.botchain.ai"]
+  nativeCurrency: { name: "BOT", symbol: "BOT", decimals: 18 },
+  label: "TESTNET"                               //              | mainnet: "MAINNET"
+};
+
+const ABI = [
+  "function createSeat(string title, uint256 price, string message) payable returns (uint256)",
+  "function buySeat(uint256 seatId, uint256 newPrice, string newMessage) payable",
+  "function setPrice(uint256 seatId, uint256 newPrice)",
+  "function depositEscrow(uint256 seatId) payable",
+  "function updateMessage(uint256 seatId, string message)",
+  "function collectTax(uint256 seatId)",
+  "function withdraw()",
+  "function seatCount() view returns (uint256)",
+  "function getSeat(uint256 id) view returns (tuple(address holder,uint256 selfPrice,uint256 escrow,uint64 lastTaxAt,uint64 createdAt,uint32 transfers,string title,string message))",
+  "function taxFor(uint256 price, uint64 secs) view returns (uint256)",
+  "function taxOwed(uint256 id) view returns (uint256)",
+  "function coverageSeconds(uint256 id) view returns (uint256)",
+  "function isForeclosed(uint256 id) view returns (bool)",
+  "function creditOf(address who) view returns (uint256)",
+  "function getRecent(uint256 limit) view returns (uint256[])",
+  "function lockedTotal() view returns (uint256)",
+  "function taxRateBps() view returns (uint16)"
+];
+
+const ZERO = "0x0000000000000000000000000000000000000000";
+const WEEK = 604800;
+const $ = (id) => document.getElementById(id);
+let provider, signer, account, contract, readContract;
+let seats = [], rateBps = 1000;
+
+function toast(msg, bad) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "show" + (bad ? " bad" : "");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => (t.className = ""), 4600);
+}
+const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+const fmt = (wei) => {
+  const n = Number(ethers.formatEther(wei));
+  return (n >= 1 ? n.toFixed(3) : n.toFixed(4)).replace(/0+$/, "").replace(/\.$/, "");
+};
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function reason(e) {
+  const m = (e && (e.shortMessage || e.reason || e.message)) || "Transaction failed";
+  return String(m).replace(/^execution reverted:?\s*/i, "").slice(0, 160);
+}
+function span(secs) {
+  secs = Number(secs);
+  if (!isFinite(secs) || secs > 3.15e9) return "—";
+  const d = Math.floor(secs / 86400);
+  if (d >= 1) return d + (d === 1 ? " day" : " days");
+  const h = Math.floor(secs / 3600);
+  if (h >= 1) return h + " hours";
+  return Math.max(0, Math.floor(secs / 60)) + " minutes";
+}
+/** A week of tax at a given price, computed the same way the contract does. */
+function weekTax(priceWei) {
+  return (priceWei * BigInt(rateBps) * BigInt(WEEK)) / (10000n * BigInt(365 * 86400));
+}
+
+/* ---------------------------------------------------------------- wallet */
+function readOnly() {
+  try {
+    const p = new ethers.JsonRpcProvider(NETWORK.rpcUrls[0]);
+    readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, p);
+  } catch (e) { /* no read-only view */ }
+}
+async function connect() {
+  if (!window.ethereum) { toast("No wallet found. Install MetaMask.", true); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    await ensureChain();
+    signer = await provider.getSigner();
+    account = await signer.getAddress();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    $("s-acct").textContent = short(account);
+    $("btn-connect").textContent = "Connected";
+    await load();
+  } catch (e) { toast(reason(e), true); }
+}
+async function ensureChain() {
+  const current = await window.ethereum.request({ method: "eth_chainId" });
+  if (current.toLowerCase() === NETWORK.chainId.toLowerCase()) return;
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: NETWORK.chainId }] });
+  } catch (err) {
+    if (err.code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: NETWORK.chainId, chainName: NETWORK.chainName, rpcUrls: NETWORK.rpcUrls,
+          blockExplorerUrls: NETWORK.blockExplorerUrls, nativeCurrency: NETWORK.nativeCurrency
+        }]
+      });
+    } else throw err;
+  }
+}
+
+/* ------------------------------------------------------------------ load */
+async function load() {
+  const c = contract || readContract;
+  if (!c || CONTRACT_ADDRESS === ZERO) { render(); return; }
+  try {
+    const [n, locked, rate] = await Promise.all([c.seatCount(), c.lockedTotal(), c.taxRateBps()]);
+    rateBps = Number(rate);
+    $("d-count").textContent = n + " seats";
+    $("d-rate").textContent = "Tax " + (rateBps / 100) + "% a year";
+    $("s-locked").textContent = fmt(locked) + " BOT";
+    $("s-credit").textContent = account ? fmt(await c.creditOf(account)) + " BOT" : "—";
+
+    const ids = await c.getRecent(18n);
+    seats = [];
+    for (const id of ids) {
+      seats.push({
+        id, s: await c.getSeat(id),
+        owed: await c.taxOwed(id),
+        cover: await c.coverageSeconds(id),
+        foreclosed: await c.isForeclosed(id)
+      });
+    }
+    render();
+  } catch (e) {
+    toast("Could not read the contract. Check the address and network.", true);
+  }
+}
+
+/* ---------------------------------------------------------------- render */
+function render() {
+  const el = $("seats");
+  if (CONTRACT_ADDRESS === ZERO) {
+    el.innerHTML = '<div class="empty">No contract address set. Deploy AgoraSeat, then paste the address into CONTRACT_ADDRESS in this file.</div>';
+    return;
+  }
+  if (!seats.length) { el.innerHTML = '<div class="empty">No seats founded yet.</div>'; return; }
+
+  el.innerHTML = seats.map(({ id, s, owed, cover, foreclosed }) => {
+    const mine = account && s.holder.toLowerCase() === account.toLowerCase();
+    const coverDays = Number(cover) / 86400;
+    const pct = Math.max(2, Math.min(100, (coverDays / 60) * 100));
+    const low = coverDays < 7;
+
+    let acts = "";
+    if (!mine) acts += '<button class="sm" data-buy="' + id + '" data-price="' + s.selfPrice + '">Buy at ' + fmt(s.selfPrice) + "</button>";
+    if (mine) {
+      acts += '<button class="line sm" data-price="' + id + '">Re-assess</button>';
+      acts += '<button class="line sm" data-msg="' + id + '">Edit message</button>';
+    }
+    acts += '<button class="line sm" data-escrow="' + id + '">Add escrow</button>';
+    if (Number(owed) > 0) acts += '<button class="line sm" data-tax="' + id + '">Collect tax</button>';
+
+    return '<article class="entry ' + (foreclosed ? "fore" : "") + '">' +
+      '<div class="kicker">No. ' + String(id).padStart(3, "0") + " · " +
+        (foreclosed ? "Foreclosed — free to take" : s.transfers + " hands") + "</div>" +
+      "<h3>" + esc(s.title) + "</h3>" +
+      '<div class="holder">held by ' + short(s.holder) + "</div>" +
+      (s.message ? "<blockquote>" + esc(s.message) + "</blockquote>" : "") +
+      '<div class="price">' + fmt(s.selfPrice) + " <small>BOT — the asking price</small></div>" +
+      '<div class="terms">Escrow ' + fmt(s.escrow) + " BOT, covering " + span(cover) +
+        (Number(owed) > 0 ? " · " + fmt(owed) + " BOT tax uncollected" : "") + "</div>" +
+      '<div class="escrowbar ' + (low ? "low" : "") + '"><i style="width:' + pct.toFixed(0) + '%"></i></div>' +
+      '<div class="acts">' + acts + "</div>" +
+    "</article>";
+  }).join("");
+}
+
+/* --------------------------------------------------------------- actions */
+async function send(label, fn) {
+  if (!contract) { toast("Connect a wallet first.", true); return; }
+  try {
+    toast(label + "…");
+    const tx = await fn();
+    await tx.wait();
+    toast(label + " confirmed");
+    await load();
+  } catch (e) { toast(reason(e), true); }
+}
+
+$("btn-create").onclick = () => {
+  const title = $("f-title").value.trim();
+  const price = $("f-price").value;
+  const escrow = $("f-escrow").value;
+  const msg = $("f-msg").value.trim();
+  if (!title) { toast("Give the seat a title.", true); return; }
+  if (!(Number(price) > 0)) { toast("Name a price above zero.", true); return; }
+
+  const need = weekTax(ethers.parseEther(price));
+  if (ethers.parseEther(escrow || "0") < need) {
+    toast("That escrow is under a week of tax — you need at least " + fmt(need) + " BOT.", true);
+    return;
+  }
+  send("Founding the seat", () =>
+    contract.createSeat(title, ethers.parseEther(price), msg, { value: ethers.parseEther(escrow) })
+  );
+};
+
+$("seats").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-buy]");
+  if (b) {
+    const price = BigInt(b.dataset.price);
+    const newPrice = prompt("Your own price for this seat, in BOT (anyone may take it from you at this number)", fmt(price));
+    if (!newPrice || !(Number(newPrice) > 0)) return;
+    const msg = prompt("Your message on the seat", "") || "";
+    const need = weekTax(ethers.parseEther(newPrice));
+    const suggested = ethers.formatEther(need * 4n);
+    const escrow = prompt("Tax escrow in BOT (a week of tax at your price is " + fmt(need) + ")", suggested);
+    if (escrow === null) return;
+    if (ethers.parseEther(escrow || "0") < need) { toast("That escrow is under a week of tax.", true); return; }
+    const value = price + ethers.parseEther(escrow || "0");
+    return send("Taking the seat", () =>
+      contract.buySeat(b.dataset.buy, ethers.parseEther(newPrice), msg.slice(0, 140), { value })
+    );
+  }
+  const p = ev.target.closest("button[data-price]:not([data-buy])");
+  if (p) {
+    const newPrice = prompt("New self-assessed price in BOT", "");
+    if (!newPrice || !(Number(newPrice) > 0)) return;
+    return send("Re-assessing", () => contract.setPrice(p.dataset.price, ethers.parseEther(newPrice)));
+  }
+  const m = ev.target.closest("button[data-msg]");
+  if (m) {
+    const msg = prompt("Message on the seat", "");
+    if (msg === null) return;
+    return send("Updating the message", () => contract.updateMessage(m.dataset.msg, msg.slice(0, 140)));
+  }
+  const e = ev.target.closest("button[data-escrow]");
+  if (e) {
+    const amt = prompt("Add how much BOT to the escrow?", "0.5");
+    if (!amt || !(Number(amt) > 0)) return;
+    return send("Adding escrow", () => contract.depositEscrow(e.dataset.escrow, { value: ethers.parseEther(amt) }));
+  }
+  const t = ev.target.closest("button[data-tax]");
+  if (t) return send("Collecting tax", () => contract.collectTax(t.dataset.tax));
+});
+
+$("btn-withdraw").onclick = () => send("Withdrawing", () => contract.withdraw());
+$("btn-connect").onclick = connect;
+$("btn-refresh").onclick = load;
+
+/* ------------------------------------------------------------------ boot */
+$("d-net").textContent = NETWORK.chainName + " · " + NETWORK.label;
+$("f-chain").textContent = "BOT Chain " + NETWORK.label;
+if (CONTRACT_ADDRESS !== ZERO) $("s-ctr").textContent = short(CONTRACT_ADDRESS);
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => location.reload());
+  window.ethereum.on("chainChanged", () => location.reload());
+}
+readOnly();
+load();
+
+/* ---- BOT Chain ecosystem footer: follows the NETWORK config above ---- */
+(function () {
+  var ex = document.getElementById("bc-explorer");
+  if (ex) ex.href = NETWORK.blockExplorerUrls[0];
+})();
+</script>
+</body>
+</html>
